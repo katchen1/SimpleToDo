@@ -2,6 +2,7 @@ package com.example.simpletodo;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
@@ -15,6 +16,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+
+    public static final String KEY_ITEM_TEXT = "item_text";
+    public static final String KEY_ITEM_POSITION = "item_position";
+    public static final int EDIT_TEXT_CODE = 20;
 
     List<String> items;
     Button btnAdd;
@@ -35,6 +40,14 @@ public class MainActivity extends AppCompatActivity {
         // Load the to-do list from the file system
         loadItems();
 
+        // Control behavior for when an item is short clicked
+        ItemsAdapter.OnClickListener onClickListener = position -> {
+            Intent i = new Intent(MainActivity.this, EditActivity.class);
+            i.putExtra(KEY_ITEM_TEXT, items.get(position));
+            i.putExtra(KEY_ITEM_POSITION, position);
+            startActivityForResult(i, EDIT_TEXT_CODE);
+        };
+
         // Control behavior for when an item is long clicked
         ItemsAdapter.OnLongClickListener onLongClickListener = position -> {
             items.remove(position); // delete the item from the model
@@ -44,19 +57,39 @@ public class MainActivity extends AppCompatActivity {
         };
 
         // Create the items adapter for the RecyclerView
-        itemsAdapter = new ItemsAdapter(items, onLongClickListener);
+        itemsAdapter = new ItemsAdapter(items, onLongClickListener, onClickListener);
         rvItems.setAdapter(itemsAdapter);
         rvItems.setLayoutManager(new LinearLayoutManager(this));
 
         // Create on-click listener for the Button
         btnAdd.setOnClickListener(v -> {
             String todoItem = etItem.getText().toString();
-            items.add(todoItem); // add item to the model
-            itemsAdapter.notifyItemInserted(items.size() - 1); // notify adapter of insertion
-            etItem.setText(""); // clear the edit text
-            Toast.makeText(getApplicationContext(), "Item was added", Toast.LENGTH_SHORT).show();
-            saveItems(); // write to the file system
+            if (todoItem.length() > 0) { // ignore empty item inputs
+                items.add(todoItem); // add item to the model
+                itemsAdapter.notifyItemInserted(items.size() - 1); // notify adapter of insertion
+                etItem.setText(""); // clear the edit text
+                Toast.makeText(getApplicationContext(), "Item was added", Toast.LENGTH_SHORT).show();
+                saveItems(); // write to the file system
+            }
         });
+    }
+
+    /* Handles the result of the edit activity. */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK && requestCode == EDIT_TEXT_CODE) {
+            // Retrieve the updated text value and original position of the edited item
+            String itemText = data.getStringExtra(KEY_ITEM_TEXT);
+            int position = data.getExtras().getInt(KEY_ITEM_POSITION);
+
+            items.set(position, itemText); // update the list model with the new item txt
+            itemsAdapter.notifyItemChanged(position); // notify the adapter
+            saveItems(); // persist the changes
+            Toast.makeText(getApplicationContext(), "Item updated successfully!", Toast.LENGTH_SHORT).show();
+        } else {
+            Log.w("MainActivity", "Unknown call to onActivityResult");
+        }
     }
 
     /* Retrieves the file where the to-do list is stored. */

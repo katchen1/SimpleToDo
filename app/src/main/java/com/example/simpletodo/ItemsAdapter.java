@@ -9,18 +9,26 @@ import java.util.List;
 /* Responsible for displaying data from the model into a row in the recycler view. */
 public class ItemsAdapter extends RecyclerView.Adapter<ItemsAdapter.ViewHolder> {
 
-    /* Interface with one method to inherit from the main activity. */
+    /* Interface for handling short click. */
+    public interface OnClickListener {
+        void onItemClicked(int position);
+    }
+
+    /* Interface for handling long click. */
     public interface OnLongClickListener {
         void onItemLongClicked(int position);
     }
 
     List<String> items;
     OnLongClickListener longClickListener;
+    OnClickListener clickListener;
 
     /* Constructor for the items adapter, */
-    public ItemsAdapter(List<String> items, OnLongClickListener longClickListener) {
+    public ItemsAdapter(List<String> items, OnLongClickListener longClickListener,
+                        OnClickListener clickListener) {
         this.items = items;
         this.longClickListener = longClickListener;
+        this.clickListener = clickListener;
     }
 
     /* Uses layout inflater to inflate a View, wraps it inside
@@ -57,9 +65,12 @@ public class ItemsAdapter extends RecyclerView.Adapter<ItemsAdapter.ViewHolder> 
         }
 
         /* Updates the view inside of the view holder with this data, and notifies the
-         * listener which position was long pressed. */
+         * listener which position was clicked or long-clicked. */
         public void bind(String item) {
             tvItem.setText(item);
+            tvItem.setOnClickListener(v -> {
+                clickListener.onItemClicked(getAdapterPosition());
+            });
             tvItem.setOnLongClickListener(v -> {
                 longClickListener.onItemLongClicked(getAdapterPosition());
                 return true;
